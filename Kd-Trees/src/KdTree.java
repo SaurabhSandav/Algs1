@@ -1,0 +1,239 @@
+import edu.princeton.cs.algs4.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Created by saurabh on 3/19/17.
+ */
+public class KdTree {
+
+    private static final boolean X_TURN = true;
+
+    private Node root;
+
+    public KdTree() {
+    }
+
+    public boolean isEmpty() {
+        return size() == 0;
+    }
+
+    public int size() {
+        return size(root);
+    }
+
+    public void insert(Point2D p) {
+        if (p == null)
+            throw new NullPointerException();
+
+        root = insert(root, null, p, X_TURN);
+    }
+
+    public boolean contains(Point2D p) {
+        if (p == null)
+            throw new NullPointerException();
+
+        return contains(root, p, X_TURN);
+    }
+
+    public void draw() {
+        drawPoints(root, X_TURN);
+    }
+
+    private void drawPoints(Node node, boolean xTurn) {
+        if (node == null) return;
+
+        StdDraw.setPenColor(StdDraw.BLACK);
+        StdDraw.setPenRadius(0.01);
+
+        node.p.draw();
+
+        if (xTurn)
+            StdDraw.setPenColor(StdDraw.RED);
+        else
+            StdDraw.setPenColor(StdDraw.BLUE);
+
+        StdDraw.setPenRadius();
+
+        node.rect.draw();
+
+        drawPoints(node.left, !X_TURN);
+        drawPoints(node.right, !X_TURN);
+    }
+
+    public Iterable<Point2D> range(RectHV queryRect) {
+        if (queryRect == null)
+            throw new NullPointerException();
+
+        ArrayList<Point2D> list = new ArrayList<>();
+
+        range(list, queryRect, root);
+
+        return list;
+    }
+
+    public Point2D nearest(Point2D p) {
+        if (p == null)
+            throw new NullPointerException();
+
+        return isEmpty() ? null : nearest(p, root, root.p, X_TURN);
+    }
+
+    private int size(Node x) {
+        if (x == null) return 0;
+        else return x.size;
+    }
+
+    private Node insert(Node x, Node parent, Point2D p, boolean xTurn) {
+        if (x == null) {
+            x = createNode(p, parent, xTurn);
+            x.size = 1 + size(x.left) + size(x.right);
+            return x;
+        }
+
+        int cmp = comparePoints(p, x.p, xTurn);
+
+        if (cmp < 0) x.left = insert(x.left, x, p, !xTurn);
+        else if (cmp > 0) x.right = insert(x.right, x, p, !xTurn);
+
+        x.size = 1 + size(x.left) + size(x.right);
+
+        return x;
+    }
+
+    private Node createNode(Point2D p, Node parent, boolean xTurn) {
+
+        RectHV rectHV;
+
+        if (parent != null) {
+            RectHV parentRect = parent.rect;
+
+            if (comparePoints(p, parent.p, !xTurn) < 0) {
+                if (xTurn)
+                    rectHV = new RectHV(parentRect.xmin(), parentRect.ymin(), parentRect.xmax(), parent.p.y());
+                else
+                    rectHV = new RectHV(parentRect.xmin(), parentRect.ymin(), parent.p.x(), parentRect.ymax());
+            } else {
+                if (xTurn)
+                    rectHV = new RectHV(parentRect.xmin(), parent.p.y(), parentRect.xmax(), parentRect.ymax());
+                else
+                    rectHV = new RectHV(parent.p.x(), parentRect.ymin(), parentRect.xmax(), parentRect.ymax());
+            }
+
+        } else {
+            rectHV = new RectHV(0, 0, 1, 1);
+        }
+
+        return new Node(p, rectHV);
+    }
+
+    private boolean contains(Node x, Point2D p, boolean xTurn) {
+        if (x == null)
+            return false;
+
+        int cmp = comparePoints(p, x.p, xTurn);
+
+        if (cmp < 0) return contains(x.left, p, !xTurn);
+        else if (cmp > 0) return contains(x.right, p, !xTurn);
+        else return true;
+    }
+
+    private void range(List<Point2D> list, RectHV queryRect, Node x) {
+        if (x == null || !queryRect.intersects(x.rect))
+            return;
+
+        if (queryRect.contains(x.p))
+            list.add(x.p);
+
+        range(list, queryRect, x.left);
+        range(list, queryRect, x.right);
+    }
+
+    private Point2D nearest(Point2D p, Node next, Point2D closest, boolean xTurn) {
+
+        double closestDist = closest.distanceSquaredTo(p);
+
+        if (next == null || closestDist < next.rect.distanceSquaredTo(p))
+            return closest;
+
+        if (p.distanceSquaredTo(next.p) < closestDist)
+            closest = next.p;
+
+        if (!xTurn) {
+            if (p.x() < next.p.x()) {
+                closest = nearest(p, next.left, closest, !xTurn);
+                closest = nearest(p, next.right, closest, !xTurn);
+            } else {
+                closest = nearest(p, next.right, closest, !xTurn);
+                closest = nearest(p, next.left, closest, !xTurn);
+            }
+        } else {
+            if (p.y() < next.p.y()) {
+                closest = nearest(p, next.left, closest, !xTurn);
+                closest = nearest(p, next.right, closest, !xTurn);
+            } else {
+                closest = nearest(p, next.right, closest, !xTurn);
+                closest = nearest(p, next.left, closest, !xTurn);
+            }
+        }
+
+        return closest;
+    }
+
+    private int comparePoints(Point2D pt1, Point2D pt2, boolean xTurn) {
+
+        if (xTurn) {
+            if (pt1.x() < pt2.x()) return -1;
+            else if (pt1.x() > pt2.x()) return 1;
+            else if (pt1.y() < pt2.y()) return -1;
+            else if (pt1.y() > pt2.y()) return 1;
+            else return 0;
+        } else {
+            if (pt1.y() < pt2.y()) return -1;
+            else if (pt1.y() > pt2.y()) return 1;
+            else if (pt1.x() < pt2.x()) return -1;
+            else if (pt1.x() > pt2.x()) return 1;
+            else return 0;
+        }
+    }
+
+    private static class Node {
+
+        private Point2D p;
+        private RectHV rect;
+        private Node left, right;
+        private int size;
+
+        Node(Point2D p, RectHV rect) {
+            this.p = p;
+            this.rect = rect;
+        }
+
+    }
+
+    public static void main(String[] args) {
+
+        String filename = "resources/" + "circle100.txt";
+        In in = new In(filename);
+
+        StdDraw.enableDoubleBuffering();
+
+        // initialize the data structures with N points from standard input
+        KdTree kdtree = new KdTree();
+        while (!in.isEmpty()) {
+            double x = in.readDouble();
+            double y = in.readDouble();
+            Point2D p = new Point2D(x, y);
+            kdtree.insert(p);
+        }
+
+        StdOut.println(kdtree.size());
+
+        StdDraw.clear();
+        StdDraw.setPenColor(StdDraw.BLACK);
+        StdDraw.setPenRadius(0.01);
+        kdtree.draw();
+        StdDraw.show();
+    }
+}

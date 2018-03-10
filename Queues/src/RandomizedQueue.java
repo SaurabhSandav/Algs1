@@ -1,0 +1,123 @@
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.StdRandom;
+
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+
+/**
+ * Created by saurabh on 3/3/17.
+ */
+public class RandomizedQueue<Item> implements Iterable<Item> {
+
+    private Item[] items;
+    private int n;
+
+    public RandomizedQueue() {
+        items = (Item[]) new Object[2];
+    }
+
+    public static void main(String[] args) {
+
+        In in = new In("resources/distinct.txt");
+        RandomizedQueue<String> queue = new RandomizedQueue<>();
+
+        for (String s : in.readAllStrings()) {
+            queue.enqueue(s);
+            System.out.println(s);
+        }
+
+        System.out.println("=======");
+
+        Iterator<String> iterator1 = queue.iterator();
+
+        while (iterator1.hasNext()) {
+            System.out.println(iterator1.next());
+        }
+    }
+
+    public boolean isEmpty() {
+        return n == 0;
+    }
+
+    public int size() {
+        return n;
+    }
+
+    private void resize(int capacity) {
+        Item[] temp = (Item[]) new Object[capacity];
+        for (int i = 0; i < n; i++) {
+            temp[i] = items[i];
+        }
+        items = temp;
+    }
+
+    public void enqueue(Item item) {
+        if (item == null)
+            throw new NullPointerException();
+
+        if (n == items.length) resize(2 * items.length);
+        items[n++] = item;
+
+    }
+
+    public Item dequeue() {
+        if (isEmpty())
+            throw new NoSuchElementException();
+
+        int randomIndex = StdRandom.uniform(n);
+
+        Item item = items[randomIndex];
+        items[randomIndex] = items[n - 1];
+        items[n - 1] = null;
+        n--;
+
+        if (n > 0 && n == items.length / 4) resize(items.length / 2);
+
+        return item;
+    }
+
+    public Item sample() {
+        if (isEmpty())
+            throw new NoSuchElementException();
+        return items[StdRandom.uniform(n)];
+    }
+
+    @Override
+    public Iterator<Item> iterator() {
+        return new RandomizedQueueIterator();
+    }
+
+    private class RandomizedQueueIterator implements Iterator<Item> {
+
+        private int i;
+        private int[] indexes;
+
+        public RandomizedQueueIterator() {
+            indexes = new int[n];
+            if (!isEmpty()) {
+                for (int i = 0; i < n; i++) {
+                    indexes[i] = i;
+                }
+                StdRandom.shuffle(indexes);
+            }
+            i = indexes.length - 1;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return i >= 0;
+        }
+
+        @Override
+        public Item next() {
+            if (!hasNext())
+                throw new NoSuchElementException();
+            return items[indexes[i--]];
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+    }
+}

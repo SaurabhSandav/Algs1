@@ -1,0 +1,122 @@
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+
+/**
+ * Created by saurabh on 3/6/17.
+ */
+public class FastCollinearPoints {
+
+    private ArrayList<LineSegmentHolder> segmentHolders;
+    private ArrayList<LineSegment> segments;
+
+    public FastCollinearPoints(Point[] points) {
+        checkCornerCases(points);
+
+        segmentHolders = new ArrayList<>();
+        segments = new ArrayList<>();
+
+        Point[] originPoints = Arrays.copyOf(points, points.length);
+        Point[] newPoints = Arrays.copyOf(points, points.length);
+
+        Arrays.sort(originPoints, Comparator.naturalOrder());
+
+        for (int i = 0; i < originPoints.length; i++) {
+            Point origin = originPoints[i];
+
+            Arrays.sort(newPoints, i, newPoints.length, origin.slopeOrder());
+
+            for (int indexStart = i; indexStart < newPoints.length - 2; indexStart++) {
+
+                int indexEnd = indexStart + 1;
+
+                Point largest = newPoints[indexStart];
+
+                while (origin.slopeOrder().compare(newPoints[indexStart], newPoints[indexEnd]) == 0) {
+
+                    if (largest.compareTo(newPoints[indexEnd]) < 0)
+                        largest = newPoints[indexEnd];
+
+                    indexEnd++;
+
+                    if (indexEnd == newPoints.length)
+                        break;
+                }
+
+                if ((indexEnd - indexStart) >= 3) {
+                    addSegment(originPoints[i], largest, newPoints, indexStart, indexEnd);
+                }
+
+                indexStart = indexEnd - 1;
+
+            }
+
+        }
+
+    }
+
+    private void addSegment(Point smallest, Point largest, Point[] newPoints, int indexStart, int indexEnd) {
+
+        for (LineSegmentHolder holder : segmentHolders) {
+            if (holder.contains(smallest, largest))
+                return;
+        }
+
+        ArrayList<Point> collinearPoints = new ArrayList<>(indexEnd - indexStart + 1);
+
+        collinearPoints.add(smallest);
+        collinearPoints.addAll(Arrays.asList(newPoints).subList(indexStart, indexEnd));
+
+        LineSegmentHolder segmentHolder = new LineSegmentHolder(smallest, largest, collinearPoints);
+
+        segmentHolders.add(segmentHolder);
+        segments.add(segmentHolder.getSegment());
+    }
+
+    public int numberOfSegments() {
+        return segments.size();
+    }
+
+    public LineSegment[] segments() {
+        return segments.toArray(new LineSegment[segments.size()]);
+    }
+
+    private void checkCornerCases(Point[] points) {
+
+        if (points == null)
+            throw new NullPointerException("Argument null");
+
+        for (int i = 0; i < points.length; i++) {
+            Point point = points[i];
+
+            if (point == null)
+                throw new NullPointerException("Point null");
+
+            for (int j = i + 1; j < points.length; j++) {
+                if (point.compareTo(points[j]) == 0)
+                    throw new IllegalArgumentException("Repeated Point");
+            }
+        }
+    }
+
+    private class LineSegmentHolder {
+
+        private Point smallest, largest;
+        private ArrayList<Point> collinearPoints;
+
+        LineSegmentHolder(Point smallest, Point largest, ArrayList<Point> collinearPoints) {
+            this.smallest = smallest;
+            this.largest = largest;
+            this.collinearPoints = collinearPoints;
+        }
+
+        LineSegment getSegment() {
+            return new LineSegment(smallest, largest);
+        }
+
+        boolean contains(Point smallest, Point largest) {
+            return collinearPoints.contains(smallest) && collinearPoints.contains(largest);
+        }
+    }
+
+}

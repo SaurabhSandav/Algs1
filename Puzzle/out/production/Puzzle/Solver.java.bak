@@ -1,0 +1,77 @@
+import edu.princeton.cs.algs4.MinPQ;
+import edu.princeton.cs.algs4.Queue;
+
+import java.util.Comparator;
+
+/**
+ * Created by saurabh on 3/13/17.
+ */
+public class Solver {
+
+    private boolean solvable;
+    private int moves;
+    private Queue<Board> solution;
+
+    public Solver(Board initial) {
+        if (initial == null)
+            throw new NullPointerException();
+
+        Comparator<Board> comparator = Comparator.comparingInt(board -> (board.manhattan() + moves()));
+
+        MinPQ<Board> boardMinPQ = new MinPQ<>(comparator);
+        MinPQ<Board> twinboardMinPQ = new MinPQ<>(comparator);
+
+        boardMinPQ.insert(initial);
+        twinboardMinPQ.insert(initial.twin());
+
+        Board curBoard = boardMinPQ.delMin();
+        Board twinBoard = twinboardMinPQ.delMin();
+
+        Board prevBoard = null;
+        Board prevTwinBoard = null;
+
+        solution = new Queue<>();
+        solution.enqueue(curBoard);
+
+        while (!curBoard.isGoal() && !twinBoard.isGoal()) {
+
+            for (Board neighbour : curBoard.neighbors())
+                if (!curBoard.equals(prevBoard))
+                    boardMinPQ.insert(neighbour);
+
+            for (Board neighbour : twinBoard.neighbors())
+                if (!twinBoard.equals(prevTwinBoard))
+                    twinboardMinPQ.insert(neighbour);
+
+            prevBoard = curBoard;
+            prevTwinBoard = twinBoard;
+
+            curBoard = boardMinPQ.delMin();
+            twinBoard = twinboardMinPQ.delMin();
+
+            solution.enqueue(curBoard);
+            moves++;
+        }
+
+        if (curBoard.isGoal())
+            solvable = true;
+
+    }
+
+    public boolean isSolvable() {
+        return solvable;
+    }
+
+    public int moves() {
+        return solvable ? moves : -1;
+    }
+
+    public Iterable<Board> solution() {
+        return solvable ? solution : null;
+    }
+
+
+    public static void main(String[] args) {
+
+    }
+}
